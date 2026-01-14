@@ -1,0 +1,7 @@
+node_modules
+*.db
+*.log
+.env
+private.key
+.DS_Store
+frontend/build
