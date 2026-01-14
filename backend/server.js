@@ -4,6 +4,8 @@ const { Vonage } = require('@vonage/server-sdk');
 require('dotenv').config();
 const { db, initDatabase } = require('./database');
 const WebSocket = require('ws');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 app.use(cors());
@@ -12,12 +14,23 @@ app.use(express.json());
 // Initialize database
 initDatabase();
 
+// Handle private key from environment variable or file
+let privateKey;
+if (process.env.VONAGE_PRIVATE_KEY) {
+  privateKey = process.env.VONAGE_PRIVATE_KEY;
+} else {
+  const keyPath = path.join(__dirname, 'private.key');
+  if (fs.existsSync(keyPath)) {
+    privateKey = fs.readFileSync(keyPath, 'utf8');
+  }
+}
+
 // Initialize Vonage
 const vonage = new Vonage({
   apiKey: process.env.VONAGE_API_KEY,
   apiSecret: process.env.VONAGE_API_SECRET,
   applicationId: process.env.VONAGE_APPLICATION_ID,
-  privateKey: process.env.VONAGE_PRIVATE_KEY || './private.key'
+  privateKey: privateKey
 });
 
 app.locals.vonage = vonage;
