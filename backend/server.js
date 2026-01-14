@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const { Auth } = require('@vonage/auth');
 const { Vonage } = require('@vonage/server-sdk');
 require('dotenv').config();
 const { db, initDatabase } = require('./database');
@@ -25,13 +26,15 @@ if (process.env.VONAGE_PRIVATE_KEY) {
   }
 }
 
-// Initialize Vonage
-const vonage = new Vonage({
-  apiKey: process.env.VONAGE_API_KEY,
-  apiSecret: process.env.VONAGE_API_SECRET,
-  applicationId: process.env.VONAGE_APPLICATION_ID,
-  privateKey: privateKey
-});
+// Initialize Vonage with proper constructor
+const vonage = new Vonage(
+  new Auth({
+    apiKey: process.env.VONAGE_API_KEY,
+    apiSecret: process.env.VONAGE_API_SECRET,
+    applicationId: process.env.VONAGE_APPLICATION_ID,
+    privateKey: privateKey
+  })
+);
 
 app.locals.vonage = vonage;
 
