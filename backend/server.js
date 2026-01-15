@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { Auth } = require('@vonage/auth');
-const { Vonage } = require('@vonage/server-sdk');
+const Vonage = require('@vonage/server-sdk');
 require('dotenv').config();
 const { db, initDatabase } = require('./database');
 const WebSocket = require('ws');
@@ -15,26 +14,24 @@ app.use(express.json());
 // Initialize database
 initDatabase();
 
-// Handle private key from environment variable or file
-let privateKey;
-if (process.env.VONAGE_PRIVATE_KEY) {
-  privateKey = process.env.VONAGE_PRIVATE_KEY;
-} else {
+// Handle private key
+let privateKey = process.env.VONAGE_PRIVATE_KEY;
+if (!privateKey) {
   const keyPath = path.join(__dirname, 'private.key');
   if (fs.existsSync(keyPath)) {
     privateKey = fs.readFileSync(keyPath, 'utf8');
+  } else {
+    console.warn('⚠️  No private key found - calls will fail');
   }
 }
 
-// Initialize Vonage with proper constructor
-const vonage = new Vonage(
-  new Auth({
-    apiKey: process.env.VONAGE_API_KEY,
-    apiSecret: process.env.VONAGE_API_SECRET,
-    applicationId: process.env.VONAGE_APPLICATION_ID,
-    privateKey: privateKey
-  })
-);
+// Initialize Vonage (v2.11.1 style)
+const vonage = new Vonage({
+  apiKey: process.env.VONAGE_API_KEY,
+  apiSecret: process.env.VONAGE_API_SECRET,
+  applicationId: process.env.VONAGE_APPLICATION_ID,
+  privateKey: privateKey
+});
 
 app.locals.vonage = vonage;
 
@@ -53,7 +50,7 @@ app.use('/api/advanced-calls', advancedCallRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ ok: true });
+  res.json({ ok: true, vonageConfigured: !!vonage });
 });
 
 // Webhook endpoints
@@ -80,12 +77,13 @@ app.post('/webhooks/recording', (req, res) => {
   res.status(204).end();
 });
 
-// WebSocket server for real-time updates
+// WebSocket server
 const PORT = process.env.PORT || 8080;
 const HOST = '0.0.0.0';
 
 const server = app.listen(PORT, HOST, () => {
   console.log(`✅ Server running on ${HOST}:${PORT}`);
+  console.log(`✅ Vonage configured: ${!!vonage}`);
 });
 
 const wss = new WebSocket.Server({ server });
