@@ -62,7 +62,7 @@ router.post('/initiate-advanced', verifyToken, async (req, res) => {
     vonage.calls.create({
       to: [{ type: 'phone', number: phone_number }],
       from: { type: 'phone', number: fromNumber },
-      answer_url: [`${process.env.BASE_URL}/api/advanced-calls/answer/${tempCallUuid}`],
+      answer_url: [`${process.env.BASE_URL}/api/advanced-calls/answer`],
       answer_method: 'POST',
       event_url: [`${process.env.BASE_URL}/webhooks/event`]
     }, (err, result) => {
@@ -95,12 +95,16 @@ router.post('/initiate-advanced', verifyToken, async (req, res) => {
   }
 });
 
-router.post('/answer/:call_uuid', async (req, res) => {
-  const { call_uuid } = req.params;
+// Answer webhook - Vonage sends the call UUID in the request
+router.post('/answer', async (req, res) => {
+  const call_uuid = req.body.uuid || req.query.uuid || req.body.conversation_uuid;
+  
+  console.log('📞 Answer webhook called for:', call_uuid);
   
   const callRow = db.prepare('SELECT call_state FROM calls WHERE call_uuid = ?').get(call_uuid);
   
   if (!callRow || !callRow.call_state) {
+    console.log('⚠️ No call state found for:', call_uuid);
     return res.json([{ action: 'talk', text: 'Call state not found.', voiceName: 'Joey' }]);
   }
 
@@ -142,12 +146,15 @@ router.post('/answer/:call_uuid', async (req, res) => {
     }
   });
 
+  console.log('📤 Sending NCCO:', JSON.stringify(ncco, null, 2));
   res.json(ncco);
 });
 
 router.post('/dtmf-handler/:call_uuid', async (req, res) => {
   const { call_uuid } = req.params;
   const { dtmf } = req.body;
+  
+  console.log('📟 DTMF received:', call_uuid, dtmf);
   
   const callRow = db.prepare('SELECT call_state FROM calls WHERE call_uuid = ?').get(call_uuid);
   
