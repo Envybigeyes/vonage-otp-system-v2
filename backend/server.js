@@ -1,11 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const Vonage = require('@vonage/server-sdk');
+const path = require('path');
 require('dotenv').config();
 const { db, initDatabase } = require('./database');
 const WebSocket = require('ws');
 const fs = require('fs');
-const path = require('path');
 
 const app = express();
 app.use(cors());
@@ -75,6 +75,14 @@ app.post('/webhooks/recording', (req, res) => {
     db.prepare('UPDATE calls SET recording_url = ? WHERE call_uuid = ?').run(recording_url, call_uuid);
   }
   res.status(204).end();
+});
+
+// Serve static frontend files
+app.use(express.static(path.join(__dirname, 'public')));
+
+// All other routes serve the React app
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // WebSocket server
